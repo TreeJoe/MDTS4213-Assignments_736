@@ -1,0 +1,343 @@
+---
+title: "Predictive Analysis Problem Set 2"
+subtitle: "Linear Regression"
+author: "Atrijo Roy - 736"
+date: "2026-02-05"
+output: html_document
+---
+
+## 1. Problem to demonstrate that the population regression line is fixed, but least square regression line varies
+
+Model:
+
+$$
+y = 2 + 3x + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0, \sigma^2)
+$$
+
+$$
+y_i \sim U(0,1), \qquad \varepsilon_i \sim \mathcal{N}(0, 4^2), \qquad \forall\, i = 1,2,\ldots,n
+$$
+
+
+```{r}
+rm(list=ls())
+
+#Step 1: Take 200 equidistant points in the range [5:10]
+x=seq(5,10,length.out=200)
+y=2+3*x
+plot(x,y,type='l',lwd=3,main="Plot of the PRF Y=2+3x")
+#Step 2: Generate xi from U(5,10) and ei from N(0,16)
+n=50
+set.seed(123)
+xi=runif(n,5,10)
+ei=rnorm(n,0,4)
+#SRF y=2+3x+e
+yi=2+3*xi+ei
+#Overlaying the the points on the PRF
+plot(x,y,type='l',lwd=4,main="Plot of the PRF Y=2+3x and the Sample points")
+points(xi,yi)
+
+```
+
+```{r}
+#Step 3: Least Square Regression line
+model1=lm(yi~xi)
+summary(model1)
+
+```
+
+$$
+\hat{y}_i = -0.09639 + 3.30540\,x_i
+$$
+ 
+
+```{r}
+
+#Overlaying the PRF and SRF
+y.hat = -0.09639 + 3.30540*xi  
+plot(x,y,type='l',lwd=2,main="Plot of the PRF and the SRF")
+lines(xi,y.hat,type='l',col="red",lty="dotted")
+legend("topleft",col=c("black","red"),lwd=c(2,1),legend=c("PRF","SRF"),
+       lty=c("solid","dotted"))
+
+```
+
+```{r}
+#Step 4: Repeat step 2 and 3 for 5 times.
+set.seed(123)
+x1=runif(n,5,10)
+e1=rnorm(n,0,4)
+y1=2+3*x1+e1
+fit1=lm(y1~x1)
+summary(fit1)
+
+
+x2=runif(n,5,10)
+e2=rnorm(n,0,4)
+y2=2+3*x2+e2
+fit2=lm(y2~x2)
+
+x3=runif(n,5,10)
+e3=rnorm(n,0,4)
+y3=2+3*x3+e3
+fit3=lm(y3~x3)
+
+x4=runif(n,5,10)
+e4=rnorm(n,0,4)
+y4=2+3*x4+e4
+fit4=lm(y4~x4)
+
+x5=runif(n,5,10)
+e5=rnorm(n,0,4)
+y5=2+3*x5+e5
+fit5=lm(y5~x5)
+
+#Data frame containing the five models' coefficients
+coeff=data.frame(coef(fit1),
+                 coef(fit2),
+                 coef(fit3),
+                 coef(fit4),
+                 coef(fit5))
+coeff
+```
+
+```{r}
+#Plot of the PRF and the Five SRFs
+
+plot(x,y,type='l',lwd=3,main="Plot of the PRF and the Five SRFs")
+lines(x1,predict(fit1),type='l',col="red")
+lines(x2,predict(fit2),type='l',col="brown")
+lines(x3,predict(fit3),type='l',col="green")
+lines(x4,predict(fit4),type='l',col="blue")
+lines(x5,predict(fit5),type='l',col="orange")
+legend("topleft",legend=c("PRF","Model 1","Model 2","Model 3",
+                          "Model 4","Model 5"),
+       col=c("black","red","brown","green","blue","orange"),
+       lwd=c(3,1,1,1,1,1))
+#Interpretation: PRF is fixed but SRF varies
+
+```
+
+---
+
+## 2. Problem to demonstrate that βˆ0 and βˆ minimises RSS
+
+
+Model
+
+$$
+\hat{y}_i = -0.09639 + 3.30540\,x_i
+$$
+
+Here
+
+$$
+\varepsilon_i \sim \mathcal{N}(0,1), \qquad \forall\, i = 1,2,\ldots,n
+$$
+
+```{r}
+rm(list=ls())
+#step 1: Generate xi~U(5,10) of size 50, and ei~N(0,1)
+#y=2+3x+e
+n=50
+set.seed(123)
+x=runif(n,5,10)
+xm=x-mean(x)
+e=rnorm(n)
+y=2+3*xm+e
+fit=lm(y~xm)
+summary(fit)
+
+```
+
+$$
+\hat{\beta}_0 = 2.0562, \qquad \hat{\beta} = 3.0764
+$$
+$$
+\mathrm{RSS}
+= (y_1 - \beta_0 - \beta x_1)^2
++ (y_2 - \beta_0 - \beta x_2)^2
++ \cdots
++ (y_n - \beta_0 - \beta x_n)^2
+$$
+
+OR
+
+$$
+\mathrm{RSS} = \sum_{i=1}^{n} (y_i - \beta_0 - \beta x_i)^2
+$$
+
+```{r}
+beta0=2.0562
+beta=3.0764
+#Creating the beta and beta0 grid values
+beta0.grid=seq(-1,1,length.out=101)+beta0
+beta.grid=seq(-1,1,length.out=101)+beta
+#Computing RSS
+RSS=c()
+for(i in 1:length(beta.grid))
+{
+  RSS[i]=sum((y-beta0.grid[i]-beta.grid[i]*xm)^2)
+}
+RSS
+```
+
+```{r}
+df=data.frame(beta0.grid,beta.grid,RSS)
+head(df) #For viewing purpose
+
+```
+
+```{r}
+df[which.min(RSS),]
+
+#We can verify the LSE minimises the RSS
+```
+
+
+$$
+\text{RSS is minimum at } \beta_0 = 2.0562,\ \beta = 3.0764,\ \text{with } \mathrm{RSS} = 42.4455,\ \text{which are the least squares estimates.}
+$$
+
+---
+
+## 3. Problem to demonstrate that least square estimators are unbiased 
+
+```{r}
+rm(list=ls())
+#Step 1: Generate xi~U(5,10) of size 50, and ei~N(0,1)
+n=50
+set.seed(123)
+x=runif(n,0,1)
+e=rnorm(n)
+y=2+3*x+e
+#Step 2: obtain LSE
+fit=lm(y~x)
+summary(fit)
+
+```
+
+$$
+\hat{\beta}_0 = 1.8576, \qquad \hat{\beta} = 3.3817
+$$
+
+
+```{r}
+beta0.hat=1.8576
+beta.hat=3.3817
+#Repeat R=1000 times
+set.seed(123)
+R=10000
+beta0=numeric(R)
+beta=numeric(R)
+n=50
+for(i in 1:R) {
+  x=runif(n,0,1)              
+  e=rnorm(n,0,1)            
+  y=2+3*x+e      
+  fit=lm(y~x)
+  beta0[i]=coef(fit)[1]    
+  beta[i]=coef(fit)[2]      
+}
+
+
+```
+
+```{r}
+list(Expected_beta0=mean(beta0),Expected_beta=mean(beta))
+
+#comment: the long run means of beta0.hat and beta hat converges to true beta and beta0
+
+```
+
+$$
+\text{As } n \to \infty,\quad \mathbb{E}(\hat{\beta}_0) \to \beta_0
+\quad \text{and} \quad
+\mathbb{E}(\hat{\beta}) \to \beta
+$$
+
+```{r}
+list(var(beta0),var(beta))
+
+#Comment: var approaches 0 as R goes up. Hence LSE is consistent.
+```
+
+$$
+\text{As } n \to \infty,\quad \operatorname{Var}(\hat{\beta}_0) \to 0
+\quad \text{and} \quad
+\operatorname{Var}(\hat{\beta}) \to 0.
+$$
+$$
+\text{Hence, by the sufficient condition for consistency, the least squares estimators }
+\hat{\beta}_0 \text{ and } \hat{\beta}
+\text{ are consistent.}
+$$
+
+---
+
+## 4. Comparing several simple linear regressions
+
+```{r}
+rm(list=ls())
+library(MASS)
+attach(Boston)
+```
+
+$$
+\begin{aligned}
+\text{Model 1: } & \mathrm{medv}_i = \beta_0 + \beta_1\,\mathrm{lstat}_i + \varepsilon_i, \\
+\text{Model 2: } & \mathrm{medv}_i = \beta_0 + \beta_1\,\mathrm{crim}_i + \varepsilon_i, \\
+\text{Model 3: } & \mathrm{medv}_i = \beta_0 + \beta_1\,\mathrm{nox}_i + \varepsilon_i, \\
+\text{Model 4: } & \mathrm{medv}_i = \beta_0 + \beta_1\,\mathrm{black}_i + \varepsilon_i,
+\end{aligned}
+$$
+
+$$
+\varepsilon_i \sim \mathcal{N}(0,\sigma^2), \qquad i = 1,2,\ldots,n
+$$
+
+$$
+\beta_0 \text{ and } \beta_1 \text{ in each case are unknown parameters and are estimated using the method of least squares.}
+$$
+
+
+```{r}
+fit1=lm(medv~lstat)
+fit2=lm(medv~crim)
+fit3=lm(medv~nox)
+fit4=lm(medv~black)
+
+```
+
+(a) Selecting the predictors one by one, run four separate linear regressions to the data. Present the output in a single table.
+
+```{r}
+library(stargazer)
+stargazer(fit1,fit2,fit3,fit4,type="text",out="f.txt")
+```
+
+(b) Which model gives the best fit? 
+
+Model 1 gives the best fit among the four simple linear regression models since it has the highest coefficient of determination.
+
+The R² values for the models are:
+$$ R^2_1 = 0.544, \quad R^2_2 = 0.151, \quad R^2_3 = 0.183, \quad R^2_4 = 0.111. $$
+
+Since R² measures the variability in the dependent variable explained by the predictor, the higher R² value for Model 1 indicates that lstat is the best explanatory variable among the four.
+
+Hence, Model 1 provides the best fit to the data.
+
+(c) Comparison and usefulness of predictors:
+
+From the four simple linear regression models with \(\mathrm{medv}\) as the dependent variable, all predictors are statistically significant at the 1\% level, indicating that each variable has a meaningful linear association with median house value.
+
+The coefficient of \(\mathrm{lstat}\) is \(-0.950\), implying that an increase in the percentage of lower-status population is associated with a substantial decrease in \(\mathrm{medv}\). This model also has the highest \(R^2\) value (0.544), suggesting that \(\mathrm{lstat}\) is the most useful predictor among the four in explaining variability in \(\mathrm{medv}\).
+
+The coefficient of \(\mathrm{crim}\) is \(-0.415\), indicating that higher crime rates are associated with lower median house values. However, its explanatory power is relatively weak, with an \(R^2\) of 0.151, making it less useful compared to \(\mathrm{lstat}\).
+
+The coefficient of \(\mathrm{nox}\) is \(-33.916\), showing a strong negative effect of air pollution on \(\mathrm{medv}\). Although the magnitude of the coefficient is large due to the scale of \(\mathrm{nox}\), the \(R^2\) value (0.183) suggests moderate usefulness in explaining variation in house values.
+
+The coefficient of \(\mathrm{black}\) is \(0.034\), indicating a positive association with \(\mathrm{medv}\). Despite being statistically significant, this predictor has the lowest explanatory power with an \(R^2\) of 0.111, making it the least useful among the four.
+
+
+In each of the four simple linear regression models, the respective predictor (lstat, crim, nox, black) is statistically significant at the 1% level of significance, as indicated by the ∗∗∗ notation. Hence, each predictor has a significant linear effect on medv when considered separately.
