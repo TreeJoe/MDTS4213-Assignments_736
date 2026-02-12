@@ -1,0 +1,270 @@
+---
+title: "Predictive Analysis Problem Set 3"
+author: "Atrijo Roy - 736"
+date: "2026-02-12"
+output: html_document
+subtitle: "Multiple Linear Regression"
+---
+### Problem 2: Problem to demonstrate the role of qualitative (nominal) predictors in addition to quantitative predictors in multiple linear regression
+
+```{r}
+rm(list=ls())
+library(ISLR)
+attach(Credit)
+head(Credit)
+```
+
+Now we regress Balance on Gender
+```{r}
+#(a)
+fit1=lm(Balance~Gender)
+summary(fit1)
+```
+
+The fitted model is given by
+
+Balance.hat = 509.8 + 19.73GenderFemale
+
+If Gender is male, predicted balance is 509.8 units on an average.
+
+If gender is female, predicted balance is 529.53 units on an average.
+
+Now we regress Balance on Gender and Ethnicity
+```{r}
+#(b)
+fit2=lm(Balance~Gender+Ethnicity)
+summary(fit2)
+```
+
+*Interpretation*
+
+Fitted model:
+
+Balance.hat = 520.88 + 20.44GenderFemale -19.37EthnicityAsian -12.65EthnicityCaucasian
+
+If Gender is male and Ethnicity is African American predicted balance is 520.88 units on an average.
+
+Now we regress Balance on Ethnicity, Gender and Income
+
+```{r}
+#(c)
+fit3=lm(Balance~Gender+Ethnicity+Income)
+summary(fit3)
+```
+
+Fitted model:
+
+Balance.hat = 230.0291 + 24.3396GenderFemale + 1.6372EthnicityAsian + 6.4469EthnicityCaucasian + 6.0542Income
+
+If income is zero, if Gender is male and Ethnicity is African American predicted balance is 230.0291 units on an average.
+
+Now we show all the three models together using stargazer.
+
+```{r}
+#(d)
+library(stargazer)
+stargazer(fit1,fit2,fit3,type="text",out="f2.txt")
+```
+
+(e)
+
+Model (a)
+
+Coefficient of GenderFemale = 19.733.
+
+Interpretation: Females have, on average, about 19.7 units higher balance than males. However, the coefficient is not statistically significant (large SE 46.051), so gender has no meaningful effect in this model.
+
+Model (b)
+
+Coefficient = 20.038.
+
+Interpretation: After controlling for ethnicity, females have about 20 units higher balance than males, again not statistically significant.
+
+Model (c)
+
+Coefficient = 24.340.
+
+Interpretation: After controlling for ethnicity and income, females have about 24.3 units higher balance than males. The effect is still not statistically significant, indicating gender does not significantly affect balance in any model.
+
+(f) Male African vs Male Caucasian using model (b)
+
+Model (b) coefficient for EthnicityCaucasian = −12.653.
+
+Both are males, so gender cancels out; African is the baseline (0), Caucasian has −12.653.
+
+Difference (Caucasian − African) = −12.653.
+
+Thus, a male Caucasian has about 12.65 units lower average balance than a male African (not statistically significant).
+
+(g) Male African vs Male Caucasian when income = 100,000 (model (c))
+
+Model (c) coefficient for EthnicityCaucasian = 6.447.
+
+Income is the same for both individuals, so the income term cancels out.
+
+Difference (Caucasian − African) = 6.447.
+
+Thus, a male Caucasian has about 6.45 units higher balance than a male African american.
+
+(h) Compare (f) and (g)
+
+In model (b), the difference was −12.653 (Caucasians lower).
+
+In model (c), after controlling for income, the difference becomes +6.447 (Caucasians slightly higher).
+
+This change shows that income is a significant variable; once income is included, the ethnicity comparison changes substantially, suggesting that some of the difference observed in model (b) was due to income differences rather than ethnicity itself.
+
+(i) Based on the model in (c), predict the credit card balance of a female Asian whose income is 2000,000 dollars.
+
+Model:
+
+\begin{equation}
+\hat{y}
+= 236.029
++ 24.340(\text{Female})
++ 1.637(\text{Asian})
++ 6.054(\text{Income})
+\end{equation}
+
+```{r}
+Female=1
+Asian=1
+Income=200000   
+y.hat=236.029 +
+      24.340*Female +
+      1.637*Asian +
+      6.054*Income
+
+y.hat
+```
+
+We get the predicted balance as 1211062 dollars
+
+(j) Check the goodness of fit of the different models in (a)-(c)
+
+*Goodness-of-fit based on (R^2) and Adjusted (R^2)*
+
+Model (1):
+
+(R^2 = 0.0005), Adjusted (R^2 = -0.002).
+
+This indicates the model does not explain almost any variation in the response; gender alone explains  none of the variation in credit card balance. The negative adjusted (R^2) suggests that the model performs no better than a model containing only the mean.
+
+Model (2):
+
+(R^2 = 0.001), Adjusted (R^2 = -0.007).
+
+After including ethnicity, the model still explains almost none of the variability in balance, indicating very poor goodness of fit.
+
+Model (3):
+
+(R^2 = 0.216), Adjusted (R^2 = 0.208).
+
+Including income substantially improves the goodness of fit, with approximately 21% of the variation in credit card balance explained by the predictors. Although the fit improves considerably compared to Models (1) and (2), the explanatory power is still moderate rather than strong.
+
+*Overall conclusion:*
+
+Models (1) and (2) show very poor fit, whereas Model (3) provides a noticeably better fit because income is an significant predictor of credit card balance.
+
+
+---
+### Problem 4:  Problem to demonstrate the impact of ignoring interaction term in multiple linear regression
+
+We perform step 1,2 and 3 for one iteration
+```{r}
+rm(list=ls())
+set.seed(123)
+beta1=c(-2.5,1.2,2.3,0.001)
+beta2=c(-2.5,1.2,2.3,3.1)
+#Step 1
+n=100
+x1=rnorm(n)
+#Step 2
+x2=rbinom(n,1,0.3)
+#Step 3
+e=rnorm(n)
+y1=beta1[1]+beta1[2]*x1+beta1[3]*x2+beta1[4]*(x1*x2)+e
+y2=beta2[1]+beta2[2]*x1+beta2[3]*x2+beta2[4]*(x1*x2)+e
+#Outputs of response y for two sets of beta values
+cbind(y1,y2)
+```
+
+```{r}
+#Regression models (For the first set of beta values)
+fit1=lm(y1~x1+x2+x1*x2) #with the interaction term
+fit2=lm(y1~x1+x2) #without the interaction term
+library(stargazer)
+stargazer(fit1,fit2,type="text",out="f1.txt")
+```
+
+*Interpretation:*
+
+R² and Adjusted R² are identical for both models (0.711).
+
+Residual standard error is also nearly the same (0.942 vs 0.937).
+
+This indicates that adding the interaction term provides almost no improvement in the multiple linear regression.
+
+Now for 1000 iterations:
+
+```{r}
+#Step 4: Repeating step 1,2 and 3 for R=1000 times
+rm(list=ls())
+set.seed(123)
+f=function(beta,n,R)
+{
+  mse.correct=c()
+  mse.naive=c()
+  for(i in 1:R)
+  {
+    x1=rnorm(n)
+    x2=rbinom(n,1,0.3)
+    e=rnorm(n)
+    y=beta[1]+beta[2]*x1+beta[3]*x2+beta[4]*(x1*x2)+e
+    fit1=lm(y~x1+x2+x1*x2)
+    mse.correct[i]=mean((y-predict(fit1))^2)
+    fit2=lm(y~x1+x2)
+    mse.naive[i]=mean((y-predict(fit2))^2)
+  }
+  c(avg.correct.mse=mean(mse.correct),avg.naive.mse=mean(mse.naive))
+}
+```
+
+Now for the first set of beta values
+
+```{r}
+beta1=c(-2.5,1.2,2.3,0.001)
+f(beta1,100,1000)
+```
+
+*Interpretation:*
+
+The two MSE values are almost identical because the true interaction coefficient (β₃ = 0.001) is essentially zero. Hence, ignoring the interaction term produces almost similar predicted response. Both models perform similarly.
+
+And for the second set of beta values
+
+```{r}
+beta2=c(-2.5,1.2,2.3,3.1)
+f(beta2,100,1000)
+```
+*Interpretation:*
+
+When the interaction effect has a large coefficient (β₃ = 3.1), the naive model that omits the interaction term has a much larger MSE, showing substantial loss of model accuracy. The correct model, which includes the interaction, maintains low MSE. This clearly demonstrates the serious impact of ignoring an important interaction term in multiple linear regression.
+
+*Conclusion:*
+
+The simulation shows that when the interaction effect is negligible, excluding the interaction term has little impact on model performance. However, when the interaction effect is strong, ignoring it leads to a substantial increase in prediction error, confirming the importance of including relevant interaction terms in regression models.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
