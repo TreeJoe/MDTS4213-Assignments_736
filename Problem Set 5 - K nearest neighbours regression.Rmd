@@ -1,0 +1,162 @@
+---
+title: "Predictive Analysis Problem Set 5"
+subtitle: "K nearest neighbours regression"
+author: "ATRIJO ROY"
+date: "2026-02-25"
+output: html_document
+---
+
+## Problem to demonstrate the utility of K nearest neighbour regression over least squares regression
+
+Consider a setting with n = 1000 observations.
+
+Generate:
+
+$$
+x_{1i} \sim \mathcal{N}(0, 2^2), \qquad
+x_{2i} \sim \text{Poisson}(\lambda = 1.5)
+$$
+
+$$
+\varepsilon_i \sim \mathcal{N}(0, 1)
+$$
+
+$$
+y_i = -2 + 1.4x_{1i} - 2.6x_{2i} + \varepsilon_i
+$$
+
+```{r}
+rm(list=ls())
+set.seed(123)
+n=1000
+x1=rnorm(n,0,2)
+x2=rpois(n,1.5)
+e=rnorm(n)
+y=-2+1.4*x1-2.6*x2+e
+```
+
+Split the data into training and test sets. Keep the first 800 observations as training data and the remaining 200 observations as test data.
+
+```{r}
+train.data=data.frame(y[1:800],x1[1:800],x2[1:800])
+colnames(train.data)=c("y","x1","x2")
+test.data=data.frame(y[801:1000],x1[801:1000],x2[801:1000])
+colnames(test.data)=c("y","x1","x2")
+#Train Data Overview
+head(train.data)
+
+#Test Data overview
+head(test.data)
+```
+
+
+Work out the following:
+
+1. Fit a multiple linear regression equation of y on x1 and x2.
+
+```{r}
+#1 linear regression
+fit1=lm(y~x1+x2,data=train.data)
+summary(fit1)
+```
+
+Fitted model is given by,
+
+$$
+\hat{y} = -2.07300 + 1.38207\,x_1 - 2.55584\,x_2
+$$
+with multiple R-sqaured = 0.9492. So this is a very good fit.
+
+Calculate the test Mean Squared Error (MSE).
+
+```{r}
+y.hat.test=predict(fit1,newdata=test.data)
+mse.test=mean((test.data$y-y.hat.test)^2)
+mse.test
+```
+Test MSE comes out as 0.998901 which is very low, implicating that the model is good.
+
+2. Fit a KNN model with k = 1, 2, 5, 9, 15. Calculate the test MSE for each choice of k.
+
+
+```{r}
+k=c(1,2,5,9,15)
+library(FNN)
+X.train=matrix(c(x1[1:800],x2[1:800]),byrow=F,ncol=2)
+X.test=matrix(c(x1[801:1000],x2[801:1000]),byrow=F,ncol=2)
+f=function(k)
+{
+pred=knn.reg(train=X.train,test=X.test,y=train.data$y,k)
+mean((test.data$y-pred$pred)^2)
+}
+test_mse=c(f(1),f(2),f(5),f(9),f(15))
+cbind(k,test_mse)
+```
+
+For five choices of K, we perform KNN regression on y and observe that for each choice of K, the MSE is low as well. So KNN regression in this case does not provide an improvement over linear regression.
+
+Now suppose the data in Step (iii) is generated as:
+
+$$
+y_i =
+\frac{1}{-2 + 1.4x_{1i} - 2.6x_{2i} + 2.9x_{1i}^2}
++ 3.1 \sin(x_{2i})
+- 1.5 x_{1i} x_{2i}^2
++ \varepsilon_i
+$$
+      
+```{r}
+y.new=1/(-2+1.4*x1-2.6*x2+2.9*x1*x1)+3.1*sin(x2)-1.5*x1*x2*x2+e
+train.data.new=data.frame(y.new[1:800],x1[1:800],x2[1:800])
+colnames(train.data.new)=c("y","x1","x2")
+test.data.new=data.frame(y.new[801:1000],x1[801:1000],x2[801:1000])
+colnames(test.data.new)=c("y","x1","x2")
+head(train.data.new) #Train data overview
+head(test.data.new) #test data overview
+```
+
+
+Work out the problems in (1) and (2).  
+
+First we fit a multiple regression model
+
+```{r}
+fit3=lm(y~x1+x2,data=train.data.new)
+summary(fit3)
+```
+
+Fitted model:
+
+$$
+\hat{y} = -0.2369 - 6.3747\,x_1 + 1.3849\,x_2
+$$
+
+with multiple R-squared = 0.3146 which means this fit is not good.
+
+Then we find out the test mse
+
+```{r}
+y.hat.test.new=predict(fit3,newdata=test.data.new)
+mse.test.new=mean((test.data.new$y-y.hat.test.new)^2)
+mse.test.new
+```
+Test MSE = 205.1776 means the model is not good.
+
+Now we perform KNN Regression on this setup for five choices of K.
+
+```{r}
+library(FNN)
+X.train.new=matrix(c(x1[1:800],x2[1:800]),byrow=F,ncol=2)
+X.test.new=matrix(c(x1[801:1000],x2[801:1000]),byrow=F,ncol=2)
+f2=function(k){
+  pred.new=knn.reg(train=X.train.new,test=X.test.new,y=y.new[1:800],k)
+  mean((test.data.new$y-pred.new$pred)^2)
+}
+mse.knn.new=c(f2(1),f2(2),f2(5),f2(9),f2(15))
+cbind(k,mse.knn.new)
+```
+Here we observe that test MSE has been reduced drastically due to KNN regression compared to multiple linear regression.
+
+So we can conclude:
+
+These results illustrate that parametric models perform best when correctly specified, while nonparametric methods such as KNN can outperform simple linear regression when the true relationship is nonlinear.
