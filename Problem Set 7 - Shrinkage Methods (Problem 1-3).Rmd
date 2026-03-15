@@ -1,0 +1,153 @@
+---
+title: "Predictive Analysis Problem Set 7"
+subtitle: "Shrinkage Methods (Problem 1,2,3)"
+author: "ATRIJO ROY"
+date: "2026-03-15"
+output: html_document
+---
+
+## Comparison of least squares, ridge regression, LASSO and Elastic Net
+
+You would be working with Hitters data set available in the ISLR library. You have to predict the Salary based on all available variables. First make sure that you have deleted all rows with one or more missing values.
+
+```{r}
+rm(list=ls())
+library(ISLR)
+df=na.omit(Hitters) #Removing the rows with missing observations.
+dim(df) #Dimensions of the Data
+```
+
+The Hitters dataset contains $n = 263$ observations and $p = 19$ predictor variables. Let $Y_i$ denote the response variable (Salary) for the $i^{th}$ player and let $X_{ij}$ denote the $j^{th}$ predictor for the $i^{th}$ player, where $j = 1,2,\dots,19$.
+
+The multiple linear regression model is given by
+
+$$
+Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \beta_3 X_{i3} + \cdots + \beta_{19} X_{i19} + \varepsilon_i, \quad i = 1,2,\dots,263
+$$
+
+where
+
+$$
+\varepsilon_i \sim N(0,\sigma^2)
+$$
+
+Here,
+
+* $Y_i$ : Salary of the $i^{th}$ player
+* $X_{ij}$ : $j^{th}$ predictor variable for the $i^{th}$ player
+* $\beta_0$ : Intercept
+* $\beta_j$ : Regression coefficient (unknown) corresponding to the $j^{th}$ predictor for $j=1,2,\dots,19$
+* $\varepsilon_i$ : Random error term
+
+i=1(1)263 and j=1(1)19
+
+1. Split the data set into a training set and a test set randomly keeping 100 observations in test set and remaining in the training set.
+
+```{r}
+set.seed(123)
+test.id=sample(1:263,100)
+train.data=df[-test.id,] #Training data
+test.data=df[test.id,] #Test data
+#Dimension of the Training Sample
+dim(train.data)
+#Dimension of the Test Data
+dim(test.data)
+```
+
+There are 263 rows, out of which we choose 100 to form the Test data. And the remaining 163 are put together to form the Training data.
+
+2. Train the model using least squares and report the train MSE and test MSE.
+
+```{r}
+m1=lm(Salary~.,data=train.data)
+mse.train=1/163*(sum((train.data$Salary-predict(m1))^2))
+y.hat.test=predict(m1,newdata=test.data)
+mse.test=mean((test.data$Salary-y.hat.test)^2)
+list(Training_MSE=mse.train,Test_MSE=mse.test)
+```
+
+Training MSE = 105334.2
+Test MSE = 87803.91
+
+The training MSE represents the average squared difference between the observed salaries and the predicted salaries for the training data. The test MSE measures the average squared prediction error on the test data.
+
+Since the test MSE is slightly smaller than the training MSE, the model does not show evidence of overfitting. It suggests that the least squares regression model generalizes reasonably well to unseen data.
+
+3. Fit ridge regression models on the training set, with grid values of λ.
+
+```{r}
+library(glmnet)
+lambda.grid = 10^seq(3, -3, length = 100)
+x=model.matrix(Salary~.,train.data)[,-1]
+x.test=model.matrix(Salary~.,test.data)[,-1]
+ridge.model=glmnet(x, train.data$Salary, alpha = 0,lambda=lambda.grid)
+```
+
+The ridge regression minimizes the penalized residual sum of squares (PRSS):
+
+$$
+PRSS = RSS + \lambda \sum_{j=1}^{19} \beta_j^2
+$$
+
+where
+
+$$
+RSS = \sum_{i=1}^{263} \left(Y_i - \beta_0 - \sum_{j=1}^{19}\beta_j X_{ij}\right)^2
+$$
+
+
+where $\lambda > 0$ is the tuning parameter controlling the amount of shrinkage applied to the regression coefficients.
+
+We take 100 grid values of $\lambda$ from $10^{-3}$ to $10^{3}$.
+Report the following:
+
+(i) the dimension of the coefficient matrix so obtained.
+
+```{r}
+dim(coef(ridge.model))
+```
+
+Thus, the ridge model estimates 20 coefficients (19 predictors, 1 intercept) for each of the 100 values of λ, producing a 20×100 coefficient matrix.
+
+(ii) The l2 norm of the regression coefficients corresponding to the 50th and 60th choice of λ. Comment on the output.
+
+```{r}
+beta50=coef(ridge.model)[,50]
+beta60=coef(ridge.model)[,60]
+
+l2.50=sqrt(sum(beta50^2))
+l2.60=sqrt(sum(beta60^2))
+
+list(l2.loss_lambda50=l2.50,l2.loss_lambda60=l2.60)
+```
+
+The $L_2$ norm measures the overall magnitude of the coefficient vector. The slightly larger value for the 60th λ indicates a slightly larger overall coefficient magnitude compared to the 50th 
+λ. However, the difference is small, suggesting that the level of shrinkage applied to the coefficients is very similar for these two values of λ.
+
+(iii) Test MSE corresponding to these two choices of λ.
+
+```{r}
+pred50 = predict(ridge.model, s = lambda.grid[50], newx = x.test)
+pred60 = predict(ridge.model, s = lambda.grid[60], newx = x.test)
+
+mse50 = mean((test.data$Salary - pred50)^2)
+mse60 = mean((test.data$Salary - pred60)^2)
+
+list(mse_lambda50=mse50,mse_lambda60=mse60)
+```
+
+**Final Result**
+
+```{r}
+out=data.frame(Lambda=c(lambda.grid[50],lambda.grid[60]),L2_Loss=c(l2.50,l2.60),Test_MSE=c(mse50,mse60))
+out
+```
+
+Since the second λ is smaller, the penalty is weaker, leading to a slightly larger $L_2$ norm (less shrinkage of coefficients). However, the test MSE is slightly higher, indicating marginally worse predictive performance.
+
+Thus, the 50th λ provides slightly better prediction accuracy due to stronger tuning. 
+
+**Conclusion:**
+
+The grid values chosen here do not show a strong difference in coefficient shrinkage or prediction error. Both λ values lead to similar $L_2$ norms and test MSE, suggesting that they fall in a stable region of the ridge solution path. A wider grid of λ values would better illustrate the impact of tuning.
+
