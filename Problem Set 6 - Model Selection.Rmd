@@ -1,0 +1,257 @@
+---
+title: "Predictive Analysis Problem Set 6"
+subtitle: "Model Selection"
+author: "ATRIJO ROY"
+date: "2026-03-15"
+output: html_document
+---
+
+## To demonstrate the application of subset selection methods
+
+Consider the “Hitters” data. For loading the data you need to install ISLR library. We wish to predict a baseball player’s salary on the basis of various predictors. So first we need to choose an optimal model.
+
+```{r}
+rm(list=ls())
+library("ISLR")
+head(Hitters)
+```
+
+1. Clean the data by removing all rows that have missing value in any variable. You will be working with this clean data.
+
+```{r}
+df=na.omit(Hitters) #1. Removing the missing rows
+dim(df)
+```
+
+The cleaned Hitters dataset contains $n = 263$ observations and $p = 19$ predictor variables. Let $Y_i$ denote the response variable (Salary) for the $i^{th}$ player and let $X_{ij}$ denote the $j^{th}$ predictor for the $i^{th}$ player, where $j = 1,2,\dots,19$.
+
+The multiple linear regression model is given by
+
+$$
+Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \beta_3 X_{i3} + \cdots + \beta_{19} X_{i19} + \varepsilon_i, \quad i = 1,2,\dots,263
+$$
+
+where
+
+$$
+\varepsilon_i \sim N(0,\sigma^2)
+$$
+
+Here,
+
+* $Y_i$ : Salary of the $i^{th}$ player
+* $X_{ij}$ : $j^{th}$ predictor variable for the $i^{th}$ player
+* $\beta_0$ : Intercept
+* $\beta_j$ : Regression coefficient (unknown) corresponding to the $j^{th}$ predictor for $j=1,2,\dots,19$
+* $\varepsilon_i$ : Random error term
+
+i=1(1)263 and j=1(1)19
+
+2. Split the data randomly into train-test keeping 80% as training sample and remaining as test sample.
+
+```{r}
+set.seed(123)
+train.id=sample(1:263,210)
+train.data=df[train.id,] #Training data
+test.data=df[-train.id,] #Test data
+#Dimension of training data
+dim(train.data)
+#Dimension of Test data
+dim(test.data)
+```
+
+Among the 263 rows we choose 80% rows i.e. 210 rows as the Training Data and the rest 53 rows as the Test data.
+
+3. Perform the best subset selection on the training sample. While choosing the best model fit up to a 19 variable model. Choose the best model according to adjusted R squared, BIC , AIC and Cp values. In case the best model differs according to the selection criteria, report the best fitted model according to each selection criterion.
+
+```{r}
+library(leaps)
+best.subset=regsubsets(Salary~.,data=train.data,nvmax=19)
+adjr2=summary(best.subset)$adjr2
+cp=summary(best.subset)$cp
+bic=summary(best.subset)$bic
+```
+
+* The less the BIC, better is the model. So the fitted model corresponding to the lowest BIC value is given by,
+
+```{r}
+coef(best.subset, which.min(bic)) #Best BIC Model
+```
+
+
+$$
+\widehat{\text{Salary}} = 149.5854 
++ 5.9582 \cdot \text{Walks} 
+- 0.5242 \cdot \text{CAtBat} 
++ 2.0687 \cdot \text{CHits} 
++ 1.7653 \cdot \text{CHmRun} 
+- 129.0165 \cdot \text{DivisionW}
+$$
+* The less the Cp value, better is the model. So the fitted model corresponding to the lowest Cp value is given by,
+
+```{r}
+coef(best.subset, which.min(cp)) #Best cp Model
+```
+
+$$
+\widehat{\text{Salary}} = 134.1594 
+- 1.9329 \text{AtBat} 
++ 5.8272 \text{Hits} 
++ 6.5037 \text{Walks} 
+- 0.2063 \text{CAtBat} 
++ 1.7820 \text{CRuns} 
++ 1.1120 \text{CRBI} 
+- 0.8879 \text{CWalks} 
+- 121.2135 \text{DivisionW} 
++ 0.1926 \text{PutOuts} 
++ 0.3317 \text{Assists} 
++ 71.1433 \text{NewLeagueN}
+$$
+* The higher the Adjusted R squared value, better is the model. So the fitted model corresponding to the highest adjusted R square value is given by,
+
+```{r}
+coef(best.subset, which.max(adjr2)) #Best Adjusted R squared Model
+```
+
+$$
+\widehat{\text{Salary}} = 154.1594 
+- 1.8722 \text{AtBat} 
++ 5.7547 \text{Hits} 
++ 6.3852 \text{Walks} 
+- 0.2092 \text{CAtBat} 
++ 1.7713 \text{CRuns} 
++ 1.1419 \text{CRBI} 
+- 0.8989 \text{CWalks} 
+- 121.8634 \text{DivisionW} 
++ 0.2013 \text{PutOuts} 
++ 0.5364 \text{Assists} 
+- 6.4727 \text{Errors} 
++ 75.8379 \text{NewLeagueN}
+$$
+4. Find the training MSE and test MSE for each of the best models selected according to different criterion as mentioned in 3 and compare their values.
+
+```{r}
+#Train MSE and Test MSE
+m.cp=lm(Salary~AtBat+Hits+Walks+CAtBat+CRuns+CRBI+CWalks+Division+PutOuts+Assists+NewLeague,data=train.data)
+m.bic=lm(Salary~Walks+CAtBat+CHits+CHmRun+Division,data=train.data)
+m.adjr=lm(Salary~AtBat+Hits+Walks+CAtBat+CRuns+CRBI+CWalks+Division+PutOuts+Assists+Errors+NewLeague,data=train.data)
+mse.train.cp=1/210*(sum((train.data$Salary-predict(m.cp))^2)) #Training MSE for cp
+mse.train.bic=1/210*(sum((train.data$Salary-predict(m.bic))^2)) #Training MSE for bic
+mse.train.adjr=1/210*(sum((train.data$Salary-predict(m.adjr))^2)) #Training MSE for adjR2
+y.hat.test.cp=predict(m.cp, newdata=test.data)
+y.hat.test.bic=predict(m.bic, newdata=test.data)
+y.hat.test.adjr=predict(m.adjr, newdata=test.data)
+mse.test.cp=mean((test.data$Salary-y.hat.test.cp)^2)
+mse.test.bic=mean((test.data$Salary-y.hat.test.bic)^2)
+mse.test.adjr=mean((test.data$Salary-y.hat.test.adjr)^2)
+out.best=data.frame(Measure=c("Cp","BIC","AdjR2"),Training_MSE=c(mse.train.cp,mse.train.bic,mse.train.adjr),
+                    Test_MSE=c(mse.test.cp,mse.test.bic,mse.test.adjr))
+out.best
+```
+
+**Comment:**
+
+The results compare three models selected using different criteria in the best subset selection method: Cp, BIC, and Adjusted R².
+
+Among these, the Cp-based model has the lowest test mean squared error (125652.3), indicating that it performs best on unseen data. The Adjusted R² model has a slightly higher test MSE (130066.9), suggesting reasonably good performance but not as strong as the Cp model. On the other hand, the BIC-based model has the highest test MSE (153090.5), indicating poorer predictive performance.
+
+This suggests that the Cp criterion provides the best balance between model complexity and goodness of fit in this case, leading to better generalization. The Adjusted R² model performs moderately well, while the BIC model appears to underfit the data due to its stronger penalty on model complexity.
+
+Therefore, for prediction purposes, the Cp-based model is preferred.
+
+5. Repeat 3-4 using forward stepwise selection method.
+
+```{r}
+forward.subset=regsubsets(Salary~.,data=train.data,nvmax=19,method="forward")
+coef(forward.subset, which.min(summary(forward.subset)$bic)) #Best BIC Model
+coef(forward.subset, which.min(summary(forward.subset)$cp)) #Best cp Model
+coef(forward.subset, which.max(summary(forward.subset)$adjr2)) #Best Adjusted R squared Model
+
+m.cp3=lm(Salary~Walks+CAtBat+CHits+CRuns+CRBI+CWalks+Division+PutOuts+Assists+Errors+NewLeague,data=train.data)
+m.bic3=lm(Salary~Walks+CAtBat+CHits+CRuns++CRBI+CWalks+Division,data=train.data)
+m.adjr3=lm(Salary~AtBat+Hits+Walks+Years+CAtBat++CHits+CRuns+CRBI+CWalks+Division+PutOuts+Assists+Errors+NewLeague,data=train.data)
+
+mse.train.cp3=1/210*(sum((train.data$Salary-predict(m.cp3))^2)) #Training MSE for cp
+mse.train.bic3=1/210*(sum((train.data$Salary-predict(m.bic3))^2)) #Training MSE for bic
+mse.train.adjr3=1/210*(sum((train.data$Salary-predict(m.adjr3))^2)) #Training MSE for adjR2
+
+y.hat.test.cp3=predict(m.cp3, newdata=test.data)
+y.hat.test.bic3=predict(m.bic3, newdata=test.data)
+y.hat.test.adjr3=predict(m.adjr3, newdata=test.data)
+mse.test.cp3=mean((test.data$Salary-y.hat.test.cp3)^2)
+mse.test.bic3=mean((test.data$Salary-y.hat.test.bic3)^2)
+mse.test.adjr3=mean((test.data$Salary-y.hat.test.adjr3)^2)
+
+out.forward=data.frame(Measure=c("Cp","BIC","AdjR2"),Training_MSE=c(mse.train.cp3,mse.train.bic3,mse.train.adjr3),
+                        Test_MSE=c(mse.test.cp3,mse.test.bic3,mse.test.adjr3))
+out.forward
+```
+
+**Comment:**
+
+The results correspond to models selected using forward selection under three criteria: Cp, BIC, and Adjusted R².
+
+Among these, the Adjusted R² model has the lowest test mean squared error (134001.7), indicating that it provides the best predictive performance on unseen data. The Cp model has a higher test MSE (145923.9), while the BIC model performs the worst with the highest test MSE (146540.9).
+
+This indicates that, in forward selection, the Adjusted R² criterion achieves a better balance between model fit and complexity, leading to improved generalization. The Cp model is slightly less effective, and the BIC model again appears to underfit due to its stronger penalty on including additional variables.
+
+Therefore, for forward selection, the model selected using Adjusted R² is preferred for prediction.
+
+6. Repeat 3-4 using backward stepwise selection method.
+
+```{r}
+backward.subset=regsubsets(Salary~.,data=train.data,nvmax=19,method="backward")
+coef(backward.subset, which.min(summary(backward.subset)$bic)) #Best BIC Model
+coef(backward.subset, which.min(summary(backward.subset)$cp)) #Best cp Model
+coef(backward.subset, which.max(summary(backward.subset)$adjr2)) #Best Adjusted R squared Model
+
+m.cp2=lm(Salary~AtBat+Hits+Walks+CAtBat+CHits+CHmRun+CRuns+CWalks+Division+PutOuts+Assists+Errors+NewLeague,data=train.data)
+m.bic2=lm(Salary~Walks+CAtBat+CHits+CHmRun+Division,data=train.data)
+m.adjr2=lm(Salary~AtBat+Hits+Walks+CAtBat+CHits+CHmRun+CRuns+CWalks+Division+PutOuts+Assists+Errors+NewLeague,data=train.data)
+
+mse.train.cp2=1/210*(sum((train.data$Salary-predict(m.cp2))^2)) #Training MSE for cp
+mse.train.bic2=1/210*(sum((train.data$Salary-predict(m.bic2))^2)) #Training MSE for bic
+mse.train.adjr2=1/210*(sum((train.data$Salary-predict(m.adjr2))^2)) #Training MSE for adjR2
+
+y.hat.test.cp2=predict(m.cp2, newdata=test.data)
+y.hat.test.bic2=predict(m.bic2, newdata=test.data)
+y.hat.test.adjr2=predict(m.adjr2, newdata=test.data)
+mse.test.cp2=mean((test.data$Salary-y.hat.test.cp2)^2)
+mse.test.bic2=mean((test.data$Salary-y.hat.test.bic2)^2)
+mse.test.adjr2=mean((test.data$Salary-y.hat.test.adjr2)^2)
+
+out.backward=data.frame(Measure=c("Cp","BIC","AdjR2"),Training_MSE=c(mse.train.cp2,mse.train.bic2,mse.train.adjr2),
+                    Test_MSE=c(mse.test.cp2,mse.test.bic2,mse.test.adjr2))
+out.backward
+```
+
+**Comment:**
+
+The results correspond to models selected using backward selection under three criteria: Cp, BIC, and Adjusted R².
+
+The Cp and Adjusted R² models have identical training MSE (88865.02) and identical test MSE (134736.7), indicating that both criteria have selected the same model. This model provides the best predictive performance among the three.
+
+The BIC model has a higher test MSE (153090.5), suggesting poorer performance on unseen data. This again indicates that BIC may be selecting a model that is too simple, leading to underfitting.
+
+Thus, in backward selection, both Cp and Adjusted R² lead to the same optimal model, which is preferred for prediction due to its lower test MSE.
+
+7. Compare the results of the three methods in terms of choice of best model, train MSE and test MSE.
+
+```{r}
+final=list(Best_Subset=out.best,Forward_Subset=out.forward,Backward_Subset=out.backward)
+final
+```
+
+**Comment:**
+
+The three subset selection methods—best subset, forward selection, and backward selection—are compared based on their chosen models and corresponding training and test mean squared errors.
+
+In the best subset selection method, the Cp-based model gives the lowest test MSE (125652.3), making it the best among all models in terms of predictive performance. The Adjusted R² model performs slightly worse (130066.9), while the BIC model has the highest test MSE (153090.5).
+
+In forward selection, the Adjusted R² model performs best with a test MSE of 134001.7, followed by the Cp model (145923.9), while the BIC model again performs the worst (146540.9). Overall, forward selection yields higher test errors compared to best subset selection, indicating comparatively weaker performance.
+
+In backward selection, both Cp and Adjusted R² select the same model, resulting in identical training MSE (88865.02) and test MSE (134736.7). This model performs better than forward selection but is still inferior to the best subset Cp model. The BIC model once again has the highest test MSE (153090.5), suggesting underfitting.
+
+Overall, the best subset selection method provides the best model, particularly under the Cp criterion, as it achieves the lowest test MSE among all approaches. Backward selection performs moderately well, while forward selection is slightly less effective. Across all methods, BIC consistently leads to poorer predictive performance due to selecting overly simple models.
+
+---
